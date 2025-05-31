@@ -1,55 +1,64 @@
 <?php
 require_once "dbaseconnection.php";
+
 session_start();
 
 if (isset($_POST['login'])) {
     $username = $_POST['username'];
-    $password = md5($_POST['pass']);
+    $password = $_POST['pass'];
 
-    $_SESSION['username'] = $username;
-
-    $loginsql = "SELECT * FROM tbl_customerdetails WHERE (username = '".$username."' OR email = '".$username."') AND password = '".$password."' AND status = 'Active'";
-    $result = $conn->query($loginsql);
-
+    $query = "SELECT * FROM tbl_customerdetails WHERE (username = ? OR email = ?) AND status = 'Active'";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("ss", $username, $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
     if ($result->num_rows == 1) {
-        $field = $result->fetch_assoc();
+        $user = $result->fetch_assoc();
 
-        $user_type = $field['account_type'];
-        $fname = $field['fname'];
-        $lname = $field['lname'];
-        $_SESSION['fullname'] = $fname." ".$lname;
+        // Check MD5 password (since your DB uses MD5)
+        if (isset($user['password']) && md5($password) === $user['password']) {
 
-        $image = $field['img_path'];
-        $id = $field['account_id'];
-        $_SESSION['account_id'] = $id;
-        $_SESSION['img_path'] = $image;
+            // Set session variables
+            $_SESSION['user_id'] = $user['account_id'] ?? null;
+            $_SESSION['username'] = $user['username'] ?? '';
+            $_SESSION['role'] = $user['role'] ?? 'customer';
+            $_SESSION['name'] = ($user['fname'] ?? '') . ' ' . ($user['lname'] ?? '');
+            $_SESSION['img_path'] = $user['image'] ?? '';
 
-        // Log the login action
-        $logssql = "INSERT INTO tbl_logs (user_id, action, datetime) VALUES ('".$id."','Logged In',NOW())";
-        $conn->query($logssql);
+            // Log the login action
+            $logssql = "INSERT INTO tbl_logs (user_id, action, datetime) VALUES (?, 'Logged In', NOW())";
+            $logstmt = $conn->prepare($logssql);
+            $logstmt->bind_param("i", $_SESSION['user_id']);
+            $logstmt->execute();
 
-        // Redirect to dashboard based on user type
-        if ($user_type == "Admin") {
-            header("location: adminD.php");
-            exit();
-        } else if ($user_type == "Employee") {
-            header("location: employeeD.php");
-            exit();
+            // Redirect based on role
+            switch (strtolower($_SESSION['role'])) {
+                case 'admin':
+                case 'employee':
+                case 'customer':
+                    header("Location: dashboard.php");
+                    exit();
+                default:
+                    header("Location: login.php?error=invalidrole");
+                    exit();
+            }
         }
-    } else {
-        echo '<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <script>
-            Swal.fire({
-                position: "center",
-                icon: "error",
-                title: "Invalid username or password",
-                showConfirmButton: false,
-                timer: 1500
-            });
-        </script>';
     }
+
+    // Login failed
+    echo '<script>
+        Swal.fire({
+            position: "center",
+            icon: "error",
+            title: "Invalid username or password",
+            showConfirmButton: false,
+            timer: 1500
+        });
+    </script>';
 }
 ?>
+
 <!doctype html>
 <html lang="en">
   <head>
