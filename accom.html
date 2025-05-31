@@ -3,9 +3,22 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bootstrap Room Layout</title>
+    <title>Accomodations</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <style>
+      :root {
+        --primary-color: #4A929E;
+      }
+      
+      body {
+        background-color: var(--light-color);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+      
+      .nav-brand {
+        font-family: 'Georgia', serif;
+        letter-spacing: 1px;
+      }
       /*  image */
       .room-image-container {
         height: 500px; 
@@ -23,14 +36,14 @@
       }
 
       .divider {
-        border-top: 3px solid #202e53;
+        border-top: 3px solid #ce6b6b;
         width: 100px;
         margin: 20px auto;
       }
       
       .amenity-icon {
-        width: 50px;
-        height: 50px;
+        width: 40px;
+        height: 40px;
         object-fit: cover;
         border-radius: 50%;
         margin: 10px;
@@ -69,9 +82,82 @@
       .room-description {
         margin-bottom: 15px;
       }
+      footer {
+        background-color: #4A929E;
+        padding: 40px 0;
+      }
+      .footer-logo {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        color: #ffffff;
+      }
+      .footer-links a {
+        display: block;
+        margin-bottom: 8px;
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 12px;
+      }
+      .footer-links a:hover {
+        color: #202E53;
+      }
+
+      .footer-contact {
+        color: #ffffff;
+        font-size: 12px;
+      }
+
+      .footer-brand-container {
+        display: flex;
+        align-items: center; 
+    }
+
+    .footer-logo-icon {
+        font-size: 3rem;
+        color: white;
+        margin-right: 1rem; 
+    }
+
+    .footer-logo-text {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: white;
+        line-height: 1.2;
+    }
     </style>
   </head>
   <body style="background-color: #BED4C3; margin: 0;">
+
+    <div class="container-fluid p-0 m-0">
+
+      <!-- Navigation -->
+      <nav class="navbar navbar-expand-lg navbar-dark px-5 py-3" style="background-color: var(--primary-color);">
+        <div class="container-fluid">
+          <a class="navbar-brand fw-bold nav-brand" href="#">
+            <i class="bi bi-flower1 me-2"></i>The Bloom & Belle Hotel
+          </a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+            <ul class="navbar-nav me-4">
+              <li class="nav-item">
+                <a class="nav-link active" href="finalindex.php">Home</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="accom.html">Accommodations</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="contactus.html">Contact Us</a>
+              </li>
+            </ul>
+            <button class="btn btn-outline-light">
+              <i class="bi bi-person-circle me-1"></i> Login
+            </button>
+          </div>
+        </div>
+      </nav>
 
     <div class="container py-4">
       <!-- Header Section -->
@@ -96,6 +182,7 @@
               <ul class="pb-2">
                 <li><strong>Classic Room:</strong> 23 sqm</li>
                 <li><strong>Price per Night:</strong> ₱3,800</li>
+                <li><strong>Capacity:</strong> 4</li>
               </ul>
 
               <!-- amenities icons -->
@@ -121,9 +208,10 @@
             
             <!-- book Now Button -->
             <div class="mt-2">
-              <button class="book-now-btn rounded-0" style="font-weight: bold;">Book now</button>
+              <button onclick="window.location.href='reservation.php'" class="book-now-btn rounded-0" style="font-weight: bold;">
+                Book now
+              </button>
             </div>
-          </div>
         </div>  
       </div>
 
@@ -141,8 +229,9 @@
               <h1 style="color: #202E53; font-weight: bold;">PREMIER SUITE</h1>
               <p class="room-description">Experience elevated comfort and elegance in the Premier Suite. With its sophisticated design, premium finishes, and thoughtful layout, this room offers a luxurious stay that blends style and relaxation.</p>
               <ul class="pb-2">
-                <li><strong>Classic Room:</strong> 25 sqm</li>
+                <li><strong>Premier Room:</strong> 25 sqm</li>
                 <li><strong>Price per Night:</strong> ₱5,200</li>
+                <li><strong>Capacity:</strong> 4</li>
               </ul>
 
               <!-- amenities icons -->
@@ -172,10 +261,13 @@
             
             <!-- book Now Button -->
             <div class="mt-2">
-              <button class="book-now-btn rounded-0" style="font-weight: bold;">Book now</button>
+              <button onclick="window.location.href='reservation.php'" class="book-now-btn rounded-0" style="font-weight: bold;">
+                Book now
+              </button>
             </div>
           </div>
         </div>
+      </div> 
 
 
             
@@ -192,8 +284,9 @@
               <h1 style="color: #202E53; font-weight: bold;">DELUXE SUITE</h1>
               <p class="room-description">Blending sophistication with convenience, the Deluxe Suite offers a slightly larger space perfect for both relaxation and productivity. Ideal for travelers who desire comfort and modern amenities without excess.</p>
               <ul class="pb-2">
-                <li><strong>Classic Room:</strong> 27 sqm</li>
-                <li><strong>Price per Night:</strong> ₱3,800</li>
+                <li><strong>Deluxe Suite:</strong> 27 sqm</li>
+                <li><strong>Price per Night:</strong> ₱7,500</li>
+                <li><strong>Capacity:</strong> 5</li>
               </ul>
 
               <!-- amenities Icons -->
@@ -227,107 +320,58 @@
             
             <!-- book Now Button -->
             <div class="mt-2">
-              <button class="book-now-btn rounded-0" style="font-weight: bold;">Book now</button>
+              <button onclick="window.location.href='reservation.php'" class="book-now-btn rounded-0" style="font-weight: bold;">
+                Book now
+              </button>            
             </div>
           </div>
-        </div>
-
-
-
-        
-      </div>
-        
-      </div>
-
-
+        </div>      
+      </div> 
     </div>
+ </div>
 
-       <!-- footer -->
-       <style>
-        footer {
-            background-color: #4A929E;
-            padding: 40px 0;
-        }
-        .footer-logo {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            color: #ffffff;
-        }
-        .footer-links a {
-            display: block;
-            margin-bottom: 8px;
-            color: #ffffff;
-            text-decoration: none;
-            font-size: 12px;
-        }
-        .footer-links a:hover {
-            color: #202E53;
-        }
+    <!-- footer -->
+ <footer class="py-4" style="background-color: #4A929E;">
+  <div class="container">
+      <div class="row align-items-center">
 
-        .footer-contact {
-            color: #ffffff;
-            font-size: 12px;
-
-        }
-
-        .footer-brand-container {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        .footer-logo-text {
-            font-size: 1.8rem;
-            font-weight: 600;
-        }
-        .hotel-logo {
-            height: 80px;
-            border: 1px solid #202E53;
-            margin-right: 1rem;
-        }
-    </style>
-
-<footer class=" py-4" style="background-color: #4A929E;">
-    <div class="container">
-        <div class="row align-items-center">
-            
-            <!-- logo and hotel name -->
-            <div class="col-md-4 text-center text-md-start mb-4 mb-md-0">
-                <div class="d-flex align-items-center justify-content-center justify-content-md-start">
-                    <img src="bblogo.png" alt="Logo" class="me-3 rounded-1" style="height: 80px; border: 1px solid #202E53;">
-                    <div class="footer-logo" style="font-size: 1.8rem; font-weight: 600;">The Bloom & Belle Hotel</div>
-                </div>
-            </div>
-
-<!-- navigation Links -->
-<div class="col-md-4 mb-4 mb-md-0 d-flex justify-content-center">
-    <div class="footer-links text-start"> 
-        <a href="#" class="d-block mb-2">Home</a>
-        <a href="#" class="d-block mb-2">Profile</a>
-        <a href="#" class="d-block mb-2">Login</a>
-        <a href="#" class="d-block mb-2">Contact Us</a>
-        <a href="#" class="d-block mb-2">Accommodations</a>
-    </div>
+          <!-- logo and hotel name -->
+          <div class="col-md-4 text-center text-md-start mb-4 mb-md-0">
+<div class="footer-brand-container">
+    <i class="bi bi-flower1 footer-logo-icon"></i>
+    <div class="footer-logo-text">The Bloom & Belle Hotel</div>
 </div>
-            <!-- contact info with socmed -->
-            <div class="col-md-4">
-                <div class="footer-contact text-start">
-                    <!-- socmed icons -->
-                    <div class="social-media mb-3">
-                        <a href="#" class="mx-2"><img src="fb.png" alt="Facebook" style="height: 30px;"></a>
-                        <a href="#" class="mx-2"><img src="ig.png" alt="Instagram" style="height: 30px;"></a>
-                        <a href="#" class="mx-2"><img src="tt.png" alt="Tiktok" style="height: 30px;"></a>
-                    </div>
-                    <p class="mb-1">1234 M.H. Del Pilar Street, Erruna, Manila,</p>
-                    <p class="mb-1">1000 Metro Manila, Philippines</p>
-                    <p class="mb-1"><b>info@thebloom&bellehotel.ph</b></p>
-                    <p class="mb-1"><b>+63 (2) 8685-1234</b></p>
-                </div>
-            </div>
-        </div>
-    </div>
-</footer>
+</div>
 
+          <!-- navigation Links -->
+          <div class="col-md-4 mb-4 mb-md-0 d-flex justify-content-center">
+              <div class="footer-links text-start"> 
+                  <a href="finalindex.php" class="d-block mb-2">Home</a>
+                  <a href="#" class="d-block mb-2">Profile</a>
+                  <a href="login.php" class="d-block mb-2">Login</a>
+                  <a href="contactus.html" class="d-block mb-2">Contact Us</a>
+                  <a href="accom.html" class="d-block mb-2">Accommodations</a>
+              </div>
+          </div>
+          
+          <!-- contact info with socmed -->
+          <div class="col-md-4">
+              <div class="footer-contact text-start">
+                  <!-- socmed icons -->
+                  <div class="social-media mb-3">
+                      <a href="#" class="mx-2"><img src="fb.png" alt="Facebook" style="height: 30px;"></a>
+                      <a href="#" class="mx-2"><img src="ig.png" alt="Instagram" style="height: 30px;"></a>
+                      <a href="#" class="mx-2"><img src="tt.png" alt="Tiktok" style="height: 30px;"></a>
+                  </div>
+                  <p class="mb-1">1234 M.H. Del Pilar Street, Erruna, Manila,</p>
+                  <p class="mb-1">1000 Metro Manila, Philippines</p>
+                  <p class="mb-1"><b>info@thebloom&bellehotel.ph</b></p>
+                  <p class="mb-1"><b>+63 (2) 8685-1234</b></p>
+              </div>
+          </div>
+      </div>
+  </div>
+</footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
   </body>
