@@ -106,6 +106,13 @@
       justify-content: space-between;
       margin-bottom: 10px;
     }
+    .room-highlight {
+      animation: highlight 2s ease;
+    }
+    @keyframes highlight {
+      0% { background-color: rgba(74, 146, 158, 0.3); }
+      100% { background-color: transparent; }
+    }
   </style>
 </head>
 <body>
@@ -149,7 +156,7 @@
           <!-- Room Type Selection -->
           <div class="mb-4">
             <div class="form-check room-type-card" id="classicRoomCard">
-              <input class="form-check-input" type="radio" name="roomType" id="classicRoom" value="classic" required checked>
+              <input class="form-check-input" type="radio" name="roomType" id="classicRoom" value="classic" required>
               <label class="form-check-label w-100" for="classicRoom">
                 <div class="d-flex justify-content-between align-items-center">
                   <div>
@@ -316,7 +323,7 @@
           <h4 class="fw-bold">Booking Summary</h4>
           <div class="mb-2">
             <small>Room Type:</small>
-            <div id="selectedRoomType" class="fw-bold">Classic Room</div>
+            <div id="selectedRoomType" class="fw-bold">Select a room</div>
           </div>
           <div class="mb-2">
             <small>Room Number:</small>
@@ -324,11 +331,11 @@
           </div>
           <div class="mb-2 d-flex justify-content-between">
             <span>Price per night:</span>
-            <span id="roomPrice">₱3,800.00</span>
+            <span id="roomPrice">-</span>
           </div>
           <div class="mb-3 d-flex justify-content-between">
             <span>Total Room Price:</span>
-            <span id="totalPrice">₱3,800.00</span>
+            <span id="totalPrice">-</span>
           </div>
 
           <!-- Amenities Summary -->
@@ -404,7 +411,7 @@
 
           <div class="price-summary d-flex justify-content-between fw-bold">
             <span>Total Price:</span>
-            <span id="finalPrice">₱3,800.00</span>
+            <span id="finalPrice">₱0.00</span>
           </div>
         </div>
       </div>
@@ -450,7 +457,7 @@
           totalRooms: 5,
           maxGuests: 4,
           rooms: [101, 102, 103, 104, 105],
-          bookings: {} // Format: { "2023-11-01": [101, 102], "2023-11-02": [101] }
+          bookings: {}
         },
         premier: {
           name: "Premier Suite",
@@ -501,7 +508,7 @@
       const amenitiesList = document.getElementById('amenitiesList');
       
       // Current selected room
-      let currentRoom = 'classic';
+      let currentRoom = null;
       let amenitiesTotal = 0;
       
       // Initialize room availability display
@@ -518,15 +525,18 @@
           document.querySelectorAll('.room-type-card').forEach(card => {
             card.classList.remove('selected');
           });
-          document.getElementById(`${currentRoom}RoomCard`).classList.add('selected');
+          const selectedCard = document.getElementById(`${currentRoom}RoomCard`);
+          selectedCard.classList.add('selected');
+          selectedCard.classList.add('room-highlight');
+          setTimeout(() => {
+            selectedCard.classList.remove('room-highlight');
+          }, 2000);
         });
       });
       
-      // Initialize room cards
-      document.getElementById('classicRoomCard').classList.add('selected');
-      
       // Update guest limit based on room type
       function updateGuestLimit() {
+        if (!currentRoom) return;
         const maxGuests = roomDatabase[currentRoom].maxGuests;
         paxInput.max = maxGuests;
         paxInput.nextElementSibling.textContent = `Please enter number of guests (1-${maxGuests}).`;
@@ -542,6 +552,13 @@
       
       // Price calculation
       function updatePrices() {
+        if (!currentRoom) {
+          roomPrice.textContent = '-';
+          totalPrice.textContent = '-';
+          finalPrice.textContent = '₱0.00';
+          return;
+        }
+        
         const checkIn = document.getElementById('checkIn').value;
         const checkOut = document.getElementById('checkOut').value;
         
@@ -566,6 +583,11 @@
       
       // Update final price including amenities
       function updateFinalPrice() {
+        if (!currentRoom) {
+          finalPrice.textContent = '₱0.00';
+          return;
+        }
+        
         const checkIn = document.getElementById('checkIn').value;
         const checkOut = document.getElementById('checkOut').value;
         let nights = 1;
@@ -634,14 +656,12 @@
             
             // Unselect if currently selected and unavailable
             if (currentRoom === roomType) {
-              document.getElementById('classicRoom').checked = true;
-              currentRoom = 'classic';
+              document.getElementById('classicRoom').checked = false;
+              currentRoom = null;
               updatePrices();
-              updateGuestLimit();
               document.querySelectorAll('.room-type-card').forEach(card => {
                 card.classList.remove('selected');
               });
-              document.getElementById('classicRoomCard').classList.add('selected');
             }
           }
         });
@@ -713,12 +733,12 @@
       
       // Amenities handling
       document.getElementById('extraBed').addEventListener('change', function() {
-        if (this.checked) {
+        if (this.checked && currentRoom) {
           // Increase guest limit by 1 if extra bed is selected
           const maxGuests = roomDatabase[currentRoom].maxGuests + 1;
           paxInput.max = maxGuests;
           paxInput.nextElementSibling.textContent = `Please enter number of guests (1-${maxGuests}).`;
-        } else {
+        } else if (currentRoom) {
           // Reset guest limit
           updateGuestLimit();
         }
@@ -831,11 +851,18 @@
           return;
         }
         
+        // Validate room selection
+        if (!currentRoom) {
+          alert('Please select a room type');
+          return;
+        }
+        
         // Validate number of guests
         const pax = parseInt(paxInput.value);
-        const maxGuests = extraBedCheckbox.checked ? 
-          roomDatabase[currentRoom].maxGuests + 1 : 
-          roomDatabase[currentRoom].maxGuests;
+        let maxGuests = roomDatabase[currentRoom].maxGuests;
+        if (extraBedCheckbox.checked) {
+          maxGuests += 1;
+        }
         
         if (pax > maxGuests) {
           alert(`Number of guests exceeds the maximum allowed for this room type (${maxGuests}).`);
@@ -913,10 +940,9 @@
         form.classList.remove('was-validated');
         
         // Reset form to default values (except room assignment)
-        document.getElementById('classicRoom').checked = true;
-        currentRoom = 'classic';
+        document.getElementById('classicRoom').checked = false;
+        currentRoom = null;
         updatePrices();
-        updateGuestLimit();
         checkAvailability();
         
         // Reset amenities
@@ -936,7 +962,24 @@
       
       // Initialize prices and guest limit
       updatePrices();
-      updateGuestLimit();
+      
+      // Handle room type from URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomParam = urlParams.get('room');
+      if (roomParam && ['classic', 'premier', 'deluxe'].includes(roomParam)) {
+        const radio = document.getElementById(`${roomParam}Room`);
+        if (radio) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change'));
+          
+          // Highlight the selected room card
+          const selectedCard = document.getElementById(`${roomParam}RoomCard`);
+          selectedCard.classList.add('room-highlight');
+          setTimeout(() => {
+            selectedCard.classList.remove('room-highlight');
+          }, 2000);
+        }
+      }
     });
   </script>
 </body>
