@@ -88,13 +88,21 @@
 
       .footer-brand-container {
         display: flex;
-        align-items: center;
-        margin-bottom: 1rem;
-      }
-      .footer-logo-text {
+        align-items: center; /* Vertical alignment */
+    }
+
+    .footer-logo-icon {
+        font-size: 3rem;
+        color: white;
+        margin-right: 1rem; /* Same as Bootstrap's me-3 */
+    }
+
+    .footer-logo-text {
         font-size: 1.8rem;
         font-weight: 600;
-      }
+        color: white;
+        line-height: 1.2; /* Tighter spacing */
+    }
       .hotel-logo {
         height: 80px;
         border: 1px solid #202E53;
@@ -119,13 +127,13 @@
           <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
             <ul class="navbar-nav me-4">
               <li class="nav-item">
-                <a class="nav-link active" href="#">Home</a>
+                <a class="nav-link active" href="finalindex.php">Home</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="#">Accommodations</a>
+                <a class="nav-link" href="accom.html">Accommodations</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="#">Contact Us</a>
+                <a class="nav-link" href="contactus.html">Contact Us</a>
               </li>
             </ul>
             <button class="btn btn-outline-light">
@@ -136,54 +144,14 @@
       </nav>
 
       <!-- banner -->
-      <div class="position-relative w-100" style="height: 90vh; background: url('images/banner.png') no-repeat center center/cover;">
+      <div class="position-relative w-100" style="height: 91vh; background: url('banner.png') no-repeat center center/cover;">
         
         <!-- text on banner -->
-        <div class="position-absolute start-0 text-white text-start ps-5 mt-5" style="top: 65%; transform: translateY(-50%);">
+        <div class="position-absolute start-0 text-white text-start ps-5 mt-5" style="top: 75%; transform: translateY(-50%);">
           <h3 class="fw-semibold">YOUR RELAXING STAY AWAITS</h3>
           <h1 class="fw-bold display-4">WELCOME TO THE BLOOM & BELLE HOTEL</h1>
         </div>
-        
-        <!-- booking bar -->
-        <div class="position-absolute bottom-0 start-0 w-100 bg-white py-3 px-4">
-          <form method="POST" action="index.html" class="row g-3 align-items-center justify-content-between">
-            <!-- date range -->
-            <div class="col-lg-6 col-md-6 col-12">
-              <div class="d-flex flex-column flex-md-row align-items-md-center gap-2">
-                <label for="date-range" class="form-label mb-0 text-secondary text-nowrap">Check-in / Check-out</label>
-                <input type="text" id="date-range" name="daterange" class="form-control rounded-0 w-100" value="01 May 2025 - 3 May 2025" required>
-              </div>
-            </div>
-        
-            <!-- adults -->
-            <div class="col-lg-2 col-md-3 col-6">
-              <div class="d-flex flex-column flex-md-row align-items-md-center gap-2">
-                <label for="adults" class="form-label mb-0 text-secondary text-nowrap">Adult(s)</label>
-                <div class="input-group">
-                  <button type="button" class="btn btn-light border rounded-0" onclick="changeValue('adults', -1)">-</button>
-                  <input type="number" id="adults" name="adults" min="0" class="form-control text-center" value="0" required>
-                  <button type="button" class="btn btn-light border rounded-0" onclick="changeValue('adults', 1)">+</button>
-                </div>
-              </div>
-            </div>
-        
-            <!-- kids -->
-            <div class="col-lg-2 col-md-3 col-6">
-              <div class="d-flex flex-column flex-md-row align-items-md-center gap-2">
-                <label for="kids" class="form-label mb-0 text-secondary text-nowrap">Kid(s)</label>
-                <div class="input-group">
-                  <button type="button" class="btn btn-light border rounded-0" onclick="changeValue('kids', -1)">-</button>
-                  <input type="number" id="kids" name="kids" min="0" class="form-control text-center" value="0">
-                  <button type="button" class="btn btn-light border rounded-0" onclick="changeValue('kids', 1)">+</button>
-                </div>
-              </div>
-            </div>
-        
-            <!-- check availability button -->
-            <div class="col-lg-2 col-md-12 col-12">
-              <button type="submit" class="btn fw-bold text-white rounded-0 w-100" style="background-color: #202E53; font-size: 1.1rem; padding: 8px 16px;">
-                Check availability
-              </button>
+    
             </div>
           </form>
         </div>
@@ -192,7 +160,7 @@
       <!-- right image -->
       <div class="row">
         <div class="col-6 mt-5 p-5">
-          <img src="images/aboutus.png" style="width: 100%; height: 450px; object-fit: cover;">
+          <img src="aboutus.png" style="width: 100%; height: 450px; object-fit: cover;">
         </div>
         <!-- about us -->
         <div class="col-6 mt-5 p-5">
@@ -214,7 +182,7 @@
           <div class="col-md-4">
             <div class="card feature-card p-4 h-100 border-0" style="background-color: var(--secondary-color); border-radius: 20px;">
               <div class="text-center mb-3">
-                <img src="images/main1.jpg" alt="Easy Booking" class="rounded-circle" width="120" height="120" style="object-fit: cover; border: 3px solid white;">
+                <img src="main1.png" alt="Easy Booking" class="rounded-circle" width="120" height="120" style="object-fit: cover; border: 3px solid white;">
               </div>
               <h4 class="text-white text-center fw-bold mb-3">EASY BOOKING</h4>
               <p class="text-white text-center mb-0">
@@ -226,7 +194,7 @@
           <div class="col-md-4">
             <div class="card feature-card p-4 h-100 border-0" style="background-color: var(--secondary-color); border-radius: 20px;">
               <div class="text-center mb-3">
-                <img src="images/main2.jpg" alt="Cozy Room" class="rounded-circle" width="120" height="120" style="object-fit: cover; border: 3px solid white;">
+                <img src="main2.png" alt="Cozy Room" class="rounded-circle" width="120" height="120" style="object-fit: cover; border: 3px solid white;">
               </div>
               <h4 class="text-white text-center fw-bold mb-3">LUXURY ROOMS</h4>
               <p class="text-white text-center mb-0">
@@ -238,7 +206,7 @@
           <div class="col-md-4">
             <div class="card feature-card p-4 h-100 border-0" style="background-color: var(--secondary-color); border-radius: 20px;">
               <div class="text-center mb-3">
-                <img src="images/main5.jpg" alt="Scenic Location" class="rounded-circle" width="120" height="120" style="object-fit: cover; border: 3px solid white;">
+                <img src="main5.png" alt="Scenic Location" class="rounded-circle" width="120" height="120" style="object-fit: cover; border: 3px solid white;">
               </div>
               <h4 class="text-white text-center fw-bold mb-3">SCENIC LOCATION</h4>
               <p class="text-white text-center mb-0">
@@ -266,7 +234,7 @@
         <!-- pic 1 -->
         <div class="col-md-4 d-flex justify-content-center">
           <div class="position-relative w-75">
-            <img src="images/bed1.png" class="hover-move w-100" style="height: 500px; object-fit: cover;">
+            <img src="bed1.png" class="hover-move w-100" style="height: 500px; object-fit: cover;">
             <div class="position-absolute bottom-0 start-0 text-white p-4" style="background-color: rgba(0,0,0,0); font-weight: bold; font-size: 24px;"> CLASSIC ROOM</div>
           </div>
         </div>
@@ -274,7 +242,7 @@
         <!-- pic 2 -->
         <div class="col-md-4 d-flex justify-content-center">
           <div class="position-relative w-75">
-            <img src="images/bed2.png" class="hover-move w-100" style="height: 500px; object-fit: cover;">
+            <img src="bed2.png" class="hover-move w-100" style="height: 500px; object-fit: cover;">
             <div class="position-absolute bottom-0 start-0 text-white p-4" style="background-color: rgba(0,0,0,0); font-weight: bold; font-size: 24px;"> PREMIERE SUITE </div>
           </div>
         </div>
@@ -282,7 +250,7 @@
         <!-- pic 3 -->
         <div class="col-md-4 d-flex justify-content-center">
           <div class="position-relative w-75">
-            <img src="images/bed3.png" class="hover-move w-100" style="height: 500px; object-fit: cover;">
+            <img src="bed3.png" class="hover-move w-100" style="height: 500px; object-fit: cover;">
             <div class="position-absolute bottom-0 start-0 text-white p-4" style="background-color: rgba(0,0,0,0); font-weight: bold; font-size: 24px;"> DELUXE SUITE</div>
           </div>
         </div>
@@ -379,36 +347,6 @@
         </div>
       </section>
 
-      <div class="row">
-        <!-- map -->
-        <div class="col-6 pt-5 pb-5 ps-5 d-flex justify-content-center">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3861.3796570633185!2d120.9777022755996!3d14.577429485906139!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397ca2f1e9bdbdf%3A0x9f96cacfa0ca8f12!2s1234%20Del%20Pilar%20St%2C%20Ermita%2C%20Manila%2C%201000%20Metro%20Manila!5e0!3m2!1sen!2sph!4v1748106880239!5m2!1sen!2sph" width="600" height="505" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-        </div>
-        <!-- contact details -->
-        <div class="col p-5">
-            <h2 style="color: #202E53; font-weight: bold;">The Bloom & Belle Hotel</h2>
-
-            <p style="color: #202E53; font-weight: bold;">Location</p>
-            <p style="color: #202E53;">1234 M.H. Del Pilar Street, Ermita, Manila,1000 Metro Manila, Philippines</p>
-
-            <p style="color: #202E53; font-weight: bold;">Telephone Number</p>
-            <p style="color: #202E53;">+63 (2) 8888-1234</p>
-
-            <p style="color: #202E53; font-weight: bold;">Mobile Number</p>
-            <p style="color: #202E53;">+63 917 123 4567</p>
-
-            <p style="color: #202E53; font-weight: bold;">General Email</p>
-            <p style="color: #202E53;">hello@thebloom&bellehotel.ph</p>
-            
-            <p style="color: #202E53; font-weight: bold;">Email for Room Reservation Inquiries</p>
-            <p style="color: #202E53;">reservations@thebloom&bellehotel.ph</p>
-            
-            <p style="color: #202E53; font-weight: bold;">Email for Event Inquiries</p>
-            <p style="color: #202E53;">events@thebloom&bellehotel.ph</p>
-        </div>
-      </div>
-    </div>
-
     <!-- footer -->
     <footer class="py-4" style="background-color: #4A929E;">
       <div class="container">
@@ -416,20 +354,20 @@
 
               <!-- logo and hotel name -->
               <div class="col-md-4 text-center text-md-start mb-4 mb-md-0">
-                  <div class="d-flex align-items-center justify-content-center justify-content-md-start">
-                      <img src="images/bblogo.png" alt="Logo" class="me-3 rounded-1" style="height: 80px; border: 1px solid #202E53;">
-                      <div class="footer-logo" style="font-size: 1.8rem; font-weight: 600;">The Bloom & Belle Hotel</div>
-                  </div>
-              </div>
+    <div class="footer-brand-container">
+        <i class="bi bi-flower1 footer-logo-icon"></i>
+        <div class="footer-logo-text">The Bloom & Belle Hotel</div>
+    </div>
+</div>
 
               <!-- navigation Links -->
               <div class="col-md-4 mb-4 mb-md-0 d-flex justify-content-center">
                   <div class="footer-links text-start"> 
-                      <a href="#" class="d-block mb-2">Home</a>
+                      <a href="finalindex.php" class="d-block mb-2">Home</a>
                       <a href="#" class="d-block mb-2">Profile</a>
-                      <a href="#" class="d-block mb-2">Login</a>
-                      <a href="#" class="d-block mb-2">Contact Us</a>
-                      <a href="#" class="d-block mb-2">Accommodations</a>
+                      <a href="login.php" class="d-block mb-2">Login</a>
+                      <a href="contactus.html" class="d-block mb-2">Contact Us</a>
+                      <a href="accom.html" class="d-block mb-2">Accommodations</a>
                   </div>
               </div>
               
@@ -438,9 +376,9 @@
                   <div class="footer-contact text-start">
                       <!-- socmed icons -->
                       <div class="social-media mb-3">
-                          <a href="#" class="mx-2"><img src="images/fb.png" alt="Facebook" style="height: 30px;"></a>
-                          <a href="#" class="mx-2"><img src="images/ig.png" alt="Instagram" style="height: 30px;"></a>
-                          <a href="#" class="mx-2"><img src="images/tt.png" alt="Tiktok" style="height: 30px;"></a>
+                          <a href="#" class="mx-2"><img src="fb.png" alt="Facebook" style="height: 30px;"></a>
+                          <a href="#" class="mx-2"><img src="ig.png" alt="Instagram" style="height: 30px;"></a>
+                          <a href="#" class="mx-2"><img src="tt.png" alt="Tiktok" style="height: 30px;"></a>
                       </div>
                       <p class="mb-1">1234 M.H. Del Pilar Street, Erruna, Manila,</p>
                       <p class="mb-1">1000 Metro Manila, Philippines</p>
@@ -453,14 +391,13 @@
     </footer>
 
     <script>
-      // number of adult/s and kids
-      function changeValue(id, delta) {
+    function changeValue(id, delta) {
         const input = document.getElementById(id);
-        let value = parseInt(input.value) || 0;
+        let value = parseInt(input.value) || 1;
         value += delta;
-        if (value < parseInt(input.min)) return;
+        if (value < 1) return;
         input.value = value;
-      }
+    }
       
       // date range
       new Litepicker({
