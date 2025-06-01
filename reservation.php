@@ -76,35 +76,40 @@ if (isset($_POST['sub'])) {
     $insertSql = "INSERT INTO tbl_reservation (user_id, room_id, check_in_date, check_out_date, total_price, reservation_status) 
                 VALUES ('$user_id', '$room_id', '$checkIn', '$checkOut', '$totalPrice', '$reservation_status')";
 
-    if ($conn->query($insertSql) === TRUE) {
-        $reservationId = $conn->insert_id;
+if ($conn->query($insertSql) === TRUE) {
+  $reservationId = $conn->insert_id;
 
-        // update room availability
-        $updateSql = "UPDATE tbl_room SET availability_status = '0' WHERE room_id = '$room_id'";
-        $conn->query($updateSql);
-        ?>
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <script>
-            Swal.fire({
-                position: "top-end",
-                icon: "success",
-                title: "Reservation Successful!",
-                showConfirmButton: false,
-                timer: 1500
-            }).then(() => {
-                window.location.href = "dashboard.php?id=<?php echo $reservationId; ?>";
-            });
-        </script>
-        <?php
-    } else {
-        echo "Error: " . $conn->error;
-    }
+  // update room availability
+  $updateSql = "UPDATE tbl_room SET availability_status = '0' WHERE room_id = '$room_id'";
+  
+  if ($conn->query($updateSql) === TRUE) {
+      echo "Successful submission";
+      ?>
+      <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+      <script>
+          Swal.fire({
+              position: "top-end",
+              icon: "success",
+              title: "Your booking has been confirmed",
+              showConfirmButton: false,
+              timer: 1500
+          }).then(() => {
+              window.location.href = "dashboard.php";
+          });
+      </script>
+      <?php
+  } else {
+      echo "Error: " . $conn->error;
+  }
+} else {
+  echo "Error: " . $conn->error;
+}
 }
 ?>
 </script>
 <?php
 
-// helper functions
+// Helper functions
 function calculateNights($checkIn, $checkOut) {
     $start = new DateTime($checkIn);
     $end = new DateTime($checkOut);
@@ -112,7 +117,7 @@ function calculateNights($checkIn, $checkOut) {
 }
 
 function getRooms($conn) {
-  // get one available room for each type
+  // Get one available room for each type
   $sql = "SELECT r.* FROM tbl_room r
           INNER JOIN (
               SELECT room_type, MIN(room_id) as min_id
@@ -159,11 +164,11 @@ function getAmenityById($conn, $id) {
     return $stmt->get_result()->fetch_assoc();
 }
 
-// fetch data
+// Fetch data
 $rooms = getRooms($conn);
 $amenities = getAmenities($conn);
 
-// identify specific amenities
+// Identify specific amenities
 $laundryAmenity = null;
 $breakfastAmenity = null;
 $gymAmenity = null;
