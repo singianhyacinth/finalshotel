@@ -1,11 +1,193 @@
+<?php
+require_once "dbaseconnection.php"; 
+
+if ($conn->connect_error) {
+  die("Connection failed: " . $conn->connect_error);
+}
+
+if (isset($_POST['sub'])) {
+    $user_id = $_POST['user_id'];
+    $room_id = $_POST['room_id'];
+    $checkIn = $_POST['checkIn'];
+    $checkOut = $_POST['checkOut'];
+    $guestName = $_POST['guestName'];
+    $pax = $_POST['pax'];
+    $specialRequest = $_POST['specialRequest'];
+    $paymentMode = $_POST['paymentMode'];
+    $amenities = isset($_POST['amenities']) ? $_POST['amenities'] : [];
+    $policyCheck = $_POST['policyCheck'];
+    $termsCheck = $_POST['termsCheck'];
+
+    $reservation_status = "Confirmed";
+    
+    // calculate nights
+    $checkInDate = new DateTime($checkIn);
+    $checkOutDate = new DateTime($checkOut);
+    $nights = $checkOutDate->diff($checkInDate)->days;
+
+    // get room price
+    $roomSql = "SELECT * FROM tbl_room WHERE room_id = '$room_id'";
+    $roomResult = $conn->query($roomSql);
+
+    if ($roomResult->num_rows > 0) {
+        $room = $roomResult->fetch_assoc();
+        $roomPrice = $room['price_per_use'] * $nights;
+     
+    } else {
+        echo "Room not found";
+        exit;
+    }
+
+    // amenities handling
+    $amenitiesArray = [];
+    $amenitiesTotal = 0;
+
+    foreach ($amenities as $amenity_id) {
+        $amenitySql = "SELECT * FROM tbl_amenity WHERE amenity_id = '$amenity_id'";
+        $amenityResult = $conn->query($amenitySql);
+        if ($amenityResult->num_rows > 0) {
+            $amenity = $amenityResult->fetch_assoc();
+            $quantity = 1;
+
+            if (isset($_POST['laundryKilos']) && $amenity_id == $_POST['laundry_amenity_id']) {
+                $quantity = intval($_POST['laundryKilos']);
+            } elseif (isset($_POST['breakfastPersons']) && $amenity_id == $_POST['breakfast_amenity_id']) {
+                $quantity = intval($_POST['breakfastPersons']);
+            } elseif (isset($_POST['gymPersons']) && $amenity_id == $_POST['gym_amenity_id']) {
+                $quantity = intval($_POST['gymPersons']);
+            }
+
+            $totalAmenityPrice = $quantity * $amenity['price_per_use'];
+            $amenitiesTotal += $totalAmenityPrice;
+
+            $amenitiesArray[] = [
+                'id' => $amenity_id,
+                'name' => $amenity['amenity_name'],
+                'quantity' => $quantity,
+                'price' => $amenity['price_per_use']
+            ];
+        }
+    }
+
+    $totalPrice = $roomPrice + $amenitiesTotal;
+    $amenitiesJson = json_encode($amenitiesArray);
+
+    // insert reservation
+    $insertSql = "INSERT INTO tbl_reservation (user_id, room_id, check_in_date, check_out_date, total_price, reservation_status) 
+                VALUES ('$user_id', '$room_id', '$checkIn', '$checkOut', '$totalPrice', '$reservation_status')";
+
+    if ($conn->query($insertSql) === TRUE) {
+        $reservationId = $conn->insert_id;
+
+        // update room availability
+        $updateSql = "UPDATE tbl_room SET availability_status = '0' WHERE room_id = '$room_id'";
+        $conn->query($updateSql);
+        ?>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            Swal.fire({
+                position: "top-end",
+                icon: "success",
+                title: "Reservation Successful!",
+                showConfirmButton: false,
+                timer: 1500
+            }).then(() => {
+                window.location.href = "dashboard.php?id=<?php echo $reservationId; ?>";
+            });
+        </script>
+        <?php
+    } else {
+        echo "Error: " . $conn->error;
+    }
+}
+?>
+</script>
+<?php
+
+// helper functions
+function calculateNights($checkIn, $checkOut) {
+    $start = new DateTime($checkIn);
+    $end = new DateTime($checkOut);
+    return $end->diff($start)->days;
+}
+
+function getRooms($conn) {
+  // get one available room for each type
+  $sql = "SELECT r.* FROM tbl_room r
+          INNER JOIN (
+              SELECT room_type, MIN(room_id) as min_id
+              FROM tbl_room
+              WHERE availability_status = '1'
+              GROUP BY room_type
+          ) t ON r.room_id = t.min_id";
+  
+  $result = $conn->query($sql);
+  $rooms = [];
+  if ($result && $result->num_rows > 0) {
+      while ($row = $result->fetch_assoc()) {
+          $rooms[] = $row;
+      }
+  }
+  return $rooms;
+}
+
+function getAmenities($conn) {
+    $sql = "SELECT * FROM tbl_amenity";
+    $result = $conn->query($sql);
+    $amenities = [];
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $amenities[] = $row;
+        }
+    }
+    return $amenities;
+}
+
+function getRoomById($conn, $id) {
+    $sql = "SELECT * FROM tbl_room WHERE room_id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc();
+}
+
+function getAmenityById($conn, $id) {
+    $sql = "SELECT * FROM tbl_amenity WHERE amenity_id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc();
+}
+
+// fetch data
+$rooms = getRooms($conn);
+$amenities = getAmenities($conn);
+
+// identify specific amenities
+$laundryAmenity = null;
+$breakfastAmenity = null;
+$gymAmenity = null;
+
+foreach ($amenities as $amenity) {
+    if (stripos($amenity['amenity_name'], 'laundry') !== false) {
+        $laundryAmenity = $amenity;
+    } elseif (stripos($amenity['amenity_name'], 'breakfast') !== false) {
+        $breakfastAmenity = $amenity;
+    } elseif (stripos($amenity['amenity_name'], 'gym') !== false) {
+        $gymAmenity = $amenity;
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Reservation Form </title>
+  <title>Reservation Form</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <style>
     body {
       background-color: #BED4C3;
@@ -113,6 +295,23 @@
       0% { background-color: rgba(74, 146, 158, 0.3); }
       100% { background-color: transparent; }
     }
+    .amenities-table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+    .amenities-table th, .amenities-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    .amenities-table th {
+      background-color: #f8f9fa;
+      font-weight: bold;
+    }
+    .amenities-table tr:hover {
+      background-color: #f5f5f5;
+    }
   </style>
 </head>
 <body>
@@ -147,62 +346,87 @@
 
   <div class="container py-5">
     <h1 class="text-center fw-bold mb-5">RESERVATION FORM PAGE</h1>
-    <form id="reservationForm" novalidate>
+    
+    <?php if (!empty($errors)): ?>
+      <div class="alert alert-danger">
+        <ul>
+          <?php foreach ($errors as $error): ?>
+            <li><?php echo htmlspecialchars($error); ?></li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+    <?php endif; ?>
+    
+    <?php if (isset($success) && $success): ?>
+      <div class="alert alert-success">
+        Reservation successful! Your reservation ID is <?php echo $reservationId; ?>
+      </div>
+    <?php endif; ?>
+    
+    <form id="reservationForm" method="post" novalidate>
+      <input type="hidden" name="user_id" value="1">
+      <input type="hidden" name="room_id" id="roomIdField">
+      <input type="hidden" name="totalPrice" id="totalPriceField">
+      <?php if ($laundryAmenity): ?>
+        <input type="hidden" name="laundry_amenity_id" value="<?php echo $laundryAmenity['amenity_id']; ?>">
+      <?php endif; ?>
+      <?php if ($breakfastAmenity): ?>
+        <input type="hidden" name="breakfast_amenity_id" value="<?php echo $breakfastAmenity['amenity_id']; ?>">
+      <?php endif; ?>
+      <?php if ($gymAmenity): ?>
+        <input type="hidden" name="gym_amenity_id" value="<?php echo $gymAmenity['amenity_id']; ?>">
+      <?php endif; ?>
+      
       <div class="row g-4">
         <!-- Left Section -->
         <div class="col-md-8 container-box">
           <h4 class="fw-bold mb-4">Select Your Room Type</h4>
-          
-          <!-- Room Type Selection -->
-          <div class="mb-4">
-            <div class="form-check room-type-card" id="classicRoomCard">
-              <input class="form-check-input" type="radio" name="roomType" id="classicRoom" value="classic" required>
-              <label class="form-check-label w-100" for="classicRoom">
+
+<!-- Room Type Selection -->
+<div class="mb-4">
+    <?php 
+    // Group rooms by type to ensure we only show one per type
+    $groupedRooms = [];
+    foreach ($rooms as $room) {
+        $groupedRooms[strtolower($room['room_type'])] = $room;
+    }
+    
+    // Define the order we want to display room types
+    $roomTypesOrder = ['classic', 'premier', 'deluxe'];
+    
+    foreach ($roomTypesOrder as $type): 
+        if (isset($groupedRooms[$type])): 
+            $room = $groupedRooms[$type];
+    ?>
+        <div class="form-check room-type-card" id="<?php echo htmlspecialchars($room['room_type']); ?>RoomCard">
+            <input class="form-check-input" type="radio" name="roomType" 
+                id="<?php echo htmlspecialchars($room['room_type']); ?>Room" 
+                value="<?php echo htmlspecialchars($room['room_type']); ?>"
+                data-room-id="<?php echo $room['room_id']; ?>"
+                data-room-number="<?php echo $room['room_number']; ?>"
+                data-price="<?php echo $room['price_per_use']; ?>"
+                data-max-guests="<?php echo $room['capacity']; ?>"
+                required>
+
+            <label class="form-check-label w-100" for="<?php echo htmlspecialchars($room['room_type']); ?>Room">
                 <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h5>Classic Room</h5>
-                    <p class="mb-1">Comfortable standard accommodation with essential amenities</p>
-                  </div>
-                  <div class="price-container">
-                    <span class="fw-bold">₱3,800</span>
-                    <span class="room-availability">5 available</span>
-                  </div>
+                    <div>
+                        <h5><?php echo htmlspecialchars(ucfirst($room['room_type'])); ?> Room</h5>
+                        <p class="mb-1"><?php echo htmlspecialchars($room['description']); ?></p>
+                        <small>Room #<?php echo htmlspecialchars($room['room_number']); ?></small>
+                    </div>
+                    <div class="price-container">
+                        <span class="fw-bold">₱<?php echo htmlspecialchars($room['price_per_use'], 2); ?></span>
+                        <span class="room-availability">Available</span>
+                    </div>
                 </div>
-              </label>
-            </div>
-            
-            <div class="form-check room-type-card" id="premierRoomCard">
-              <input class="form-check-input" type="radio" name="roomType" id="premierRoom" value="premier">
-              <label class="form-check-label w-100" for="premierRoom">
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h5>Premier Suite</h5>
-                    <p class="mb-1">Spacious suite with premium amenities and city views</p>
-                  </div>
-                  <div class="price-container">
-                    <span class="fw-bold">₱5,200</span>
-                    <span class="room-availability">5 available</span>
-                  </div>
-                </div>
-              </label>
-            </div>
-            
-            <div class="form-check room-type-card" id="deluxeRoomCard">
-              <input class="form-check-input" type="radio" name="roomType" id="deluxeRoom" value="deluxe">
-              <label class="form-check-label w-100" for="deluxeRoom">
-                <div class="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h5>Deluxe Suite</h5>
-                    <p class="mb-1">Luxurious accommodation with premium services and panoramic views</p>
-                  </div>
-                  <div class="price-container">
-                    <span class="fw-bold">₱7,500</span>
-                    <span class="room-availability">5 available</span>
-                  </div>
-                </div>
-              </label>
-            </div>
-          </div>
+            </label>
+        </div>
+    <?php 
+        endif;
+    endforeach; 
+    ?>
+</div>
 
           <div class="row mb-3">
             <div class="col-md-6">
@@ -231,9 +455,9 @@
 
           <div class="mb-3">
             <label for="pax" class="form-label">Number of Guests</label>
-            <input type="number" class="form-control" id="pax" name="pax" value="1" min="1" max="4" required>
+            <input type="number" class="form-control" id="pax" name="pax" value="1" min="1" required>
             <div class="invalid-feedback">
-              Please enter number of guests (1-4).
+              Please enter number of guests.
             </div>
           </div>
 
@@ -241,49 +465,72 @@
           <div class="amenities-container">
             <h5 class="fw-bold mb-3">Additional Amenities</h5>
             
-            <div class="amenity-item">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="extraBed" name="amenities" value="extraBed">
-                <label class="form-check-label" for="extraBed">Extra Bed (₱800)</label>
-              </div>
-              <span>₱800</span>
-            </div>
+            <!-- Amenities Table -->
+            <table class="amenities-table">
+              <thead>
+                <tr>
+                  <th>Amenity ID</th>
+                  <th>Amenity Name</th>
+                  <th>Description</th>
+                  <th>Price per Use</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($amenities as $amenity): ?>
+                  <tr>
+                    <td><?php echo htmlspecialchars($amenity['amenity_id']); ?></td>
+                    <td>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" 
+                               id="amenity_<?php echo $amenity['amenity_id']; ?>" 
+                               name="amenities[]" 
+                               value="<?php echo $amenity['amenity_id']; ?>">
+                        <label class="form-check-label" for="amenity_<?php echo $amenity['amenity_id']; ?>">
+                          <?php echo htmlspecialchars($amenity['amenity_name']); ?>
+                        </label>
+                      </div>
+                    </td>
+                    <td><?php echo htmlspecialchars($amenity['description']); ?></td>
+                    <td><?php echo htmlspecialchars($amenity['price_per_use'], 2); ?></td>
+                    </td>
+
+                <?php endforeach; ?>
+              </tbody>
+            </table>
             
-            <div class="amenity-item">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="massage" name="amenities" value="massage">
-                <label class="form-check-label" for="massage">Massage (₱1,000)</label>
-              </div>
-              <span>₱1,000</span>
-            </div>
-            
-            <div class="amenity-item">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="laundry" name="amenities" value="laundry">
-                <label class="form-check-label" for="laundry">Laundry Service (₱200/kg)</label>
-              </div>
-              <div>
-                <input type="number" class="form-control form-control-sm" id="laundryKilos" name="laundryKilos" min="1" max="10" style="width: 70px;" disabled>
-              </div>
-            </div>
-            
-            <div class="amenity-item">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="breakfast" name="amenities" value="breakfast">
-                <label class="form-check-label" for="breakfast">Breakfast Buffet (₱600/person)</label>
-              </div>
-              <div>
-                <input type="number" class="form-control form-control-sm" id="breakfastPersons" name="breakfastPersons" min="1" max="10" style="width: 70px;" disabled>
-              </div>
-            </div>
-            
-            <div class="amenity-item">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="gym" name="amenities" value="gym">
-                <label class="form-check-label" for="gym">Gym Access (₱300/person)</label>
-              </div>
-              <div>
-                <input type="number" class="form-control form-control-sm" id="gymPersons" name="gymPersons" min="1" max="10" style="width: 70px;" disabled>
+            <!-- Quantity inputs for amenities that need them -->
+            <div class="mt-3">
+              <div class="row g-3">
+                <?php if ($laundryAmenity): ?>
+                  <div class="col-md-6" id="laundryQuantity" style="display: none;">
+                    <label for="laundryKilos" class="form-label">Laundry Quantity (kg)</label>
+                    <input type="number" class="form-control" id="laundryKilos" name="laundryKilos" min="1" max="10" value="1">
+                  </div>
+                <?php endif; ?>
+                
+                <?php if ($breakfastAmenity): ?>
+                  <div class="col-md-6" id="breakfastQuantity" style="display: none;">
+                    <label for="breakfastPersons" class="form-label">Breakfast Persons</label>
+                    <input type="number" class="form-control" id="breakfastPersons" name="breakfastPersons" min="1" max="10" value="1">
+                  </div>
+                <?php endif; ?>
+                
+                <?php if ($gymAmenity): ?>
+                  <div class="col-md-6" id="gymQuantity" style="display: none;">
+                    <label for="gymPersons" class="form-label">Gym Persons</label>
+                    <input type="number" class="form-control" id="gymPersons" name="gymPersons" min="1" max="10" value="1">
+                  </div>
+                <?php endif; ?>
+                <?php if ($laundryAmenity): ?>
+                <input type="hidden" name="laundry_amenity_id" value="<?php echo $laundryAmenity['amenity_id']; ?>">
+              <?php endif; ?>
+              <?php if ($breakfastAmenity): ?>
+                <input type="hidden" name="breakfast_amenity_id" value="<?php echo $breakfastAmenity['amenity_id']; ?>">
+              <?php endif; ?>
+              <?php if ($gymAmenity): ?>
+                <input type="hidden" name="gym_amenity_id" value="<?php echo $gymAmenity['amenity_id']; ?>">
+              <?php endif; ?>
+
               </div>
             </div>
           </div>
@@ -318,35 +565,51 @@
           </div>
         </div>
 
-        <!-- Right Section -->
-        <div class="col-md-4 container-box">
-          <h4 class="fw-bold">Booking Summary</h4>
-          <div class="mb-2">
-            <small>Room Type:</small>
-            <div id="selectedRoomType" class="fw-bold">Select a room</div>
-          </div>
-          <div class="mb-2">
-            <small>Room Number:</small>
-            <div id="assignedRoomNumber" class="fw-bold">Will be assigned after booking</div>
-          </div>
-          <div class="mb-2 d-flex justify-content-between">
-            <span>Price per night:</span>
-            <span id="roomPrice">-</span>
-          </div>
-          <div class="mb-3 d-flex justify-content-between">
-            <span>Total Room Price:</span>
-            <span id="totalPrice">-</span>
-          </div>
+<!-- Right Section -->
+<div class="col-md-4 container-box">
+    <h4 class="fw-bold">Booking Summary</h4>
+    <div class="mb-2">
+        <small>Room Type:</small>
+        <div id="selectedRoomType" class="fw-bold">Select a room</div>
+    </div>
+    <div class="mb-2">
+        <small>Room Number:</small>
+        <div id="assignedRoomNumber" class="fw-bold">Will be assigned after booking</div>
+    </div>
+    <div class="mb-2">
+        <small>Check-in:</small>
+        <div id="summaryCheckIn" class="fw-bold">-</div>
+    </div>
+    <div class="mb-2">
+        <small>Check-out:</small>
+        <div id="summaryCheckOut" class="fw-bold">-</div>
+    </div>
+    <div class="mb-2">
+        <small>Night/s:</small>
+        <div id="summaryNights" class="fw-bold">-</div>
+    </div>
+    <div class="mb-2 d-flex justify-content-between">
+        <span>Price per night:</span>
+        <span id="roomPrice">-</span>
+    </div>
+    <div class="mb-3 d-flex justify-content-between">
+        <span>Total Room Price:</span>
+        <span id="totalRoomPrice">-</span>
+    </div>
 
-          <!-- Amenities Summary -->
-          <div id="amenitiesSummary" class="mb-3" style="display: none;">
-            <h5 class="fw-bold mt-4">Additional Amenities</h5>
-            <div id="amenitiesList"></div>
-          </div>
+    <!-- Amenities Summary -->
+    <div id="amenitiesSummary" class="mb-3" style="display: none;">
+        <h5 class="fw-bold mt-4">Additional Amenities</h5>
+        <div id="amenitiesList"></div>
+        <div class="d-flex justify-content-between mt-2">
+            <span>Total Amenities:</span>
+            <span id="totalAmenitiesPrice">₱0.00</span>
+        </div>
+    </div>
 
-          <hr>
+    <hr>
 
-          <h5 class="fw-bold mt-4">Mode of Payment</h5>
+ <h5 class="fw-bold mt-4">Mode of Payment</h5>
           <div class="form-check mb-2">
             <input class="form-check-input" type="radio" name="paymentMode" id="gcash" value="gcash" required>
             <label class="form-check-label" for="gcash">
@@ -410,577 +673,244 @@
           </div>
 
           <div class="price-summary d-flex justify-content-between fw-bold">
-            <span>Total Price:</span>
-            <span id="finalPrice">₱0.00</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-4">
-        <button type="submit" class="reserve-btn">Reserve</button>
-      </div>
-    </form>
-  </div>
-
-  <!-- Success Modal -->
-  <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header border-0">
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body text-center py-4">
-          <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
-          <h3 class="mt-3">Reservation Successful!</h3>
-          <p class="mt-3">Your reservation for <span id="confirmedRoomType">Classic Room</span> has been confirmed.</p>
-          <p>Room Number: <span id="confirmedRoomNumber">101</span></p>
-          <p>Total Amount: <span id="confirmedPrice">₱3,800.00</span></p>
-          <p>Check-in: <span id="confirmedCheckIn">2023-11-01</span></p>
-          <p>Check-out: <span id="confirmedCheckOut">2023-11-02</span></p>
-          <p>A confirmation email has been sent to your registered email address.</p>
-        </div>
-        <div class="modal-footer border-0 justify-content-center">
-          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
-        </div>
-      </div>
+        <span>Total Price:</span>
+        <span id="finalPrice">₱0.00</span>
     </div>
+</div>
+      <div class="mt-4">
+        <button type="submit" class="reserve-btn" name ="sub">Reserve</button>
+        
+      </div>
+      
+    </form>
+    
   </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Database simulation
-      const roomDatabase = {
-        classic: {
-          name: "Classic Room",
-          price: 3800,
-          totalRooms: 5,
-          maxGuests: 4,
-          rooms: [101, 102, 103, 104, 105],
-          bookings: {}
-        },
-        premier: {
-          name: "Premier Suite",
-          price: 5200,
-          totalRooms: 5,
-          maxGuests: 4,
-          rooms: [201, 202, 203, 204, 205],
-          bookings: {}
-        },
-        deluxe: {
-          name: "Deluxe Suite",
-          price: 7500,
-          totalRooms: 5,
-          maxGuests: 5,
-          rooms: [301, 302, 303, 304, 305],
-          bookings: {}
-        }
-      };
-
-      // Amenities prices
-      const amenitiesPrices = {
-        extraBed: 800,
-        massage: 1000,
-        laundry: 200,
-        breakfast: 600,
-        gym: 300
-      };
-
-      const form = document.getElementById('reservationForm');
-      const roomPrice = document.getElementById('roomPrice');
-      const totalPrice = document.getElementById('totalPrice');
-      const finalPrice = document.getElementById('finalPrice');
-      const selectedRoomType = document.getElementById('selectedRoomType');
-      const assignedRoomNumber = document.getElementById('assignedRoomNumber');
-      const confirmedRoomType = document.getElementById('confirmedRoomType');
-      const confirmedRoomNumber = document.getElementById('confirmedRoomNumber');
-      const confirmedPrice = document.getElementById('confirmedPrice');
-      const confirmedCheckIn = document.getElementById('confirmedCheckIn');
-      const confirmedCheckOut = document.getElementById('confirmedCheckOut');
-      const gcashRadio = document.getElementById('gcash');
-      const cardRadio = document.getElementById('card');
-      const gcashPaymentField = document.getElementById('gcashPaymentField');
-      const cardPaymentFields = document.getElementById('cardPaymentFields');
-      const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-      const paxInput = document.getElementById('pax');
-      const extraBedCheckbox = document.getElementById('extraBed');
-      const amenitiesSummary = document.getElementById('amenitiesSummary');
-      const amenitiesList = document.getElementById('amenitiesList');
-      
-      // Current selected room
-      let currentRoom = null;
-      let amenitiesTotal = 0;
-      
-      // Initialize room availability display
-      updateRoomAvailabilityDisplay();
-      
-      // Room type selection
-      document.querySelectorAll('input[name="roomType"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-          currentRoom = this.value;
-          updatePrices();
-          updateGuestLimit();
-          
-          // Update card styling
-          document.querySelectorAll('.room-type-card').forEach(card => {
-            card.classList.remove('selected');
-          });
-          const selectedCard = document.getElementById(`${currentRoom}RoomCard`);
-          selectedCard.classList.add('selected');
-          selectedCard.classList.add('room-highlight');
-          setTimeout(() => {
-            selectedCard.classList.remove('room-highlight');
-          }, 2000);
-        });
-      });
-      
-      // Update guest limit based on room type
-      function updateGuestLimit() {
-        if (!currentRoom) return;
-        const maxGuests = roomDatabase[currentRoom].maxGuests;
-        paxInput.max = maxGuests;
-        paxInput.nextElementSibling.textContent = `Please enter number of guests (1-${maxGuests}).`;
-      }
-      
-      // Calculate number of nights between dates
-      function calculateNights(checkIn, checkOut) {
-        const startDate = new Date(checkIn);
-        const endDate = new Date(checkOut);
-        const diffTime = Math.abs(endDate - startDate);
-        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      }
-      
-      // Price calculation
-      function updatePrices() {
-        if (!currentRoom) {
-          roomPrice.textContent = '-';
-          totalPrice.textContent = '-';
-          finalPrice.textContent = '₱0.00';
-          return;
-        }
-        
-        const checkIn = document.getElementById('checkIn').value;
-        const checkOut = document.getElementById('checkOut').value;
-        
-        if (!checkIn || !checkOut) {
-          // If dates aren't selected yet, default to 1 night
-          const price = roomDatabase[currentRoom].price;
-          roomPrice.textContent = `₱${price.toLocaleString('en-PH')}.00`;
-          totalPrice.textContent = `₱${price.toLocaleString('en-PH')}.00`;
-          updateFinalPrice();
-          return;
-        }
-        
-        const nights = calculateNights(checkIn, checkOut);
-        const price = roomDatabase[currentRoom].price;
-        const total = nights * price;
-        
-        roomPrice.textContent = `₱${price.toLocaleString('en-PH')}.00`;
-        totalPrice.textContent = `₱${total.toLocaleString('en-PH')}.00`;
-        updateFinalPrice();
-        selectedRoomType.textContent = roomDatabase[currentRoom].name;
-      }
-      
-      // Update final price including amenities
-      function updateFinalPrice() {
-        if (!currentRoom) {
-          finalPrice.textContent = '₱0.00';
-          return;
-        }
-        
-        const checkIn = document.getElementById('checkIn').value;
-        const checkOut = document.getElementById('checkOut').value;
-        let nights = 1;
-        
-        if (checkIn && checkOut) {
-          nights = calculateNights(checkIn, checkOut);
-        }
-        
-        const price = roomDatabase[currentRoom].price;
-        const roomTotal = nights * price;
-        const finalTotal = roomTotal + amenitiesTotal;
-        
-        finalPrice.textContent = `₱${finalTotal.toLocaleString('en-PH')}.00`;
-      }
-      
-      // Payment method toggle
-      gcashRadio.addEventListener('change', function() {
-        if (this.checked) {
-          gcashPaymentField.style.display = 'block';
-          cardPaymentFields.style.display = 'none';
-          // Clear card fields
-          document.getElementById('cardName').value = '';
-          document.getElementById('cardNumber').value = '';
-          document.getElementById('cardExpiry').value = '';
-          document.getElementById('cardCvc').value = '';
-        }
-      });
-      
-      cardRadio.addEventListener('change', function() {
-        if (this.checked) {
-          cardPaymentFields.style.display = 'block';
-          gcashPaymentField.style.display = 'none';
-          // Clear GCash fields
-          document.getElementById('gcashName').value = '';
-          document.getElementById('gcashNumber').value = '';
-        }
-      });
-      
-      // Check room availability for selected dates
-      document.getElementById('checkIn').addEventListener('change', checkAvailability);
-      document.getElementById('checkOut').addEventListener('change', checkAvailability);
-      
-      function checkAvailability() {
-        const checkIn = document.getElementById('checkIn').value;
-        const checkOut = document.getElementById('checkOut').value;
-        
-        if (!checkIn || !checkOut) return;
-        
-        // Update prices based on new dates
-        updatePrices();
-        
-        // For each room type, check availability
-        Object.keys(roomDatabase).forEach(roomType => {
-          const available = isRoomAvailable(roomType, checkIn, checkOut);
-          const roomCard = document.getElementById(`${roomType}RoomCard`);
-          const availabilityBadge = roomCard.querySelector('.room-availability');
-          
-          if (available.available) {
-            roomCard.classList.remove('unavailable');
-            availabilityBadge.textContent = `${available.availableRooms} available`;
-            availabilityBadge.style.backgroundColor = '#4a929e'; // Available color
-          } else {
-            roomCard.classList.add('unavailable');
-            availabilityBadge.textContent = 'Sold out';
-            availabilityBadge.style.backgroundColor = '#ce6b6b'; // Sold out color
-            
-            // Unselect if currently selected and unavailable
-            if (currentRoom === roomType) {
-              document.getElementById('classicRoom').checked = false;
-              currentRoom = null;
-              updatePrices();
-              document.querySelectorAll('.room-type-card').forEach(card => {
-                card.classList.remove('selected');
-              });
-            }
-          }
-        });
-      }
-      
-      function isRoomAvailable(roomType, checkIn, checkOut) {
-        const roomData = roomDatabase[roomType];
-        const bookedRooms = new Set();
-        
-        // Convert dates to Date objects for comparison
-        const startDate = new Date(checkIn);
-        const endDate = new Date(checkOut);
-        
-        // Check each date in the range
-        for (let date = new Date(startDate); date < endDate; date.setDate(date.getDate() + 1)) {
-          const dateStr = date.toISOString().split('T')[0];
-          if (roomData.bookings[dateStr]) {
-            roomData.bookings[dateStr].forEach(room => bookedRooms.add(room));
-          }
-        }
-        
-        const availableRooms = roomData.totalRooms - bookedRooms.size;
-        return {
-          available: availableRooms > 0,
-          availableRooms: availableRooms
-        };
-      }
-      
-      function updateRoomAvailabilityDisplay() {
-        Object.keys(roomDatabase).forEach(roomType => {
-          const roomCard = document.getElementById(`${roomType}RoomCard`);
-          const availabilityBadge = roomCard.querySelector('.room-availability');
-          availabilityBadge.textContent = `${roomDatabase[roomType].totalRooms} available`;
-        });
-      }
-      
-      function assignRoom(roomType, checkIn, checkOut) {
-        const roomData = roomDatabase[roomType];
-        const startDate = new Date(checkIn);
-        const endDate = new Date(checkOut);
-        
-        // Find first available room
-        for (const room of roomData.rooms) {
-          let isAvailable = true;
-          
-          // Check if room is booked on any date in the range
-          for (let date = new Date(startDate); date < endDate; date.setDate(date.getDate() + 1)) {
-            const dateStr = date.toISOString().split('T')[0];
-            if (roomData.bookings[dateStr] && roomData.bookings[dateStr].includes(room)) {
-              isAvailable = false;
-              break;
-            }
-          }
-          
-          if (isAvailable) {
-            // Book the room for each date
-            for (let date = new Date(startDate); date < endDate; date.setDate(date.getDate() + 1)) {
-              const dateStr = date.toISOString().split('T')[0];
-              if (!roomData.bookings[dateStr]) {
-                roomData.bookings[dateStr] = [];
-              }
-              roomData.bookings[dateStr].push(room);
-            }
-            return room;
-          }
-        }
-        return null; // No available room (shouldn't happen if we checked availability first)
-      }
-      
-      // Amenities handling
-      document.getElementById('extraBed').addEventListener('change', function() {
-        if (this.checked && currentRoom) {
-          // Increase guest limit by 1 if extra bed is selected
-          const maxGuests = roomDatabase[currentRoom].maxGuests + 1;
-          paxInput.max = maxGuests;
-          paxInput.nextElementSibling.textContent = `Please enter number of guests (1-${maxGuests}).`;
-        } else if (currentRoom) {
-          // Reset guest limit
-          updateGuestLimit();
-        }
-        updateAmenities();
-      });
-      
-      document.getElementById('laundry').addEventListener('change', function() {
-        document.getElementById('laundryKilos').disabled = !this.checked;
-        updateAmenities();
-      });
-      
-      document.getElementById('breakfast').addEventListener('change', function() {
-        document.getElementById('breakfastPersons').disabled = !this.checked;
-        updateAmenities();
-      });
-      
-      document.getElementById('gym').addEventListener('change', function() {
-        document.getElementById('gymPersons').disabled = !this.checked;
-        updateAmenities();
-      });
-      
-      // Update amenities when quantity inputs change
-      document.getElementById('laundryKilos').addEventListener('input', updateAmenities);
-      document.getElementById('breakfastPersons').addEventListener('input', updateAmenities);
-      document.getElementById('gymPersons').addEventListener('input', updateAmenities);
-      
-      // Handle other amenities checkboxes
-      document.querySelectorAll('input[name="amenities"]').forEach(checkbox => {
-        if (checkbox.id !== 'extraBed' && checkbox.id !== 'laundry' && checkbox.id !== 'breakfast' && checkbox.id !== 'gym') {
-          checkbox.addEventListener('change', updateAmenities);
-        }
-      });
-      
-      function updateAmenities() {
-        amenitiesTotal = 0;
-        let amenitiesHtml = '';
-        
-        // Extra Bed
-        if (document.getElementById('extraBed').checked) {
-          const price = amenitiesPrices.extraBed;
-          amenitiesTotal += price;
-          amenitiesHtml += `<div class="d-flex justify-content-between mb-2">
-            <span>Extra Bed:</span>
-            <span>₱${price.toLocaleString('en-PH')}.00</span>
-          </div>`;
-        }
-        
-        // Massage
-        if (document.getElementById('massage').checked) {
-          const price = amenitiesPrices.massage;
-          amenitiesTotal += price;
-          amenitiesHtml += `<div class="d-flex justify-content-between mb-2">
-            <span>Massage:</span>
-            <span>₱${price.toLocaleString('en-PH')}.00</span>
-          </div>`;
-        }
-        
-        // Laundry
-        if (document.getElementById('laundry').checked) {
-          const kilos = parseInt(document.getElementById('laundryKilos').value) || 1;
-          const price = amenitiesPrices.laundry * kilos;
-          amenitiesTotal += price;
-          amenitiesHtml += `<div class="d-flex justify-content-between mb-2">
-            <span>Laundry Service (${kilos} kg):</span>
-            <span>₱${price.toLocaleString('en-PH')}.00</span>
-          </div>`;
-        }
-        
-        // Breakfast
-        if (document.getElementById('breakfast').checked) {
-          const persons = parseInt(document.getElementById('breakfastPersons').value) || 1;
-          const price = amenitiesPrices.breakfast * persons;
-          amenitiesTotal += price;
-          amenitiesHtml += `<div class="d-flex justify-content-between mb-2">
-            <span>Breakfast Buffet (${persons} persons):</span>
-            <span>₱${price.toLocaleString('en-PH')}.00</span>
-          </div>`;
-        }
-        
-        // Gym Access
-        if (document.getElementById('gym').checked) {
-          const persons = parseInt(document.getElementById('gymPersons').value) || 1;
-          const price = amenitiesPrices.gym * persons;
-          amenitiesTotal += price;
-          amenitiesHtml += `<div class="d-flex justify-content-between mb-2">
-            <span>Gym Access (${persons} persons):</span>
-            <span>₱${price.toLocaleString('en-PH')}.00</span>
-          </div>`;
-        }
-        
-        // Update amenities summary
-        if (amenitiesHtml) {
-          amenitiesList.innerHTML = amenitiesHtml;
-          amenitiesSummary.style.display = 'block';
-        } else {
-          amenitiesSummary.style.display = 'none';
-        }
-        
-        updateFinalPrice();
-      }
-      
-      // Form validation
-      form.addEventListener('submit', function(event) {
-        event.preventDefault();
-        event.stopPropagation();
-        
-        // Validate main form
-        if (!form.checkValidity()) {
-          form.classList.add('was-validated');
-          return;
-        }
-        
-        // Validate room selection
-        if (!currentRoom) {
-          alert('Please select a room type');
-          return;
-        }
-        
-        // Validate number of guests
-        const pax = parseInt(paxInput.value);
-        let maxGuests = roomDatabase[currentRoom].maxGuests;
-        if (extraBedCheckbox.checked) {
-          maxGuests += 1;
-        }
-        
-        if (pax > maxGuests) {
-          alert(`Number of guests exceeds the maximum allowed for this room type (${maxGuests}).`);
-          return;
-        }
-        
-        // Additional validation for payment methods
-        if (gcashRadio.checked) {
-          if (!document.getElementById('gcashName').value) {
-            document.getElementById('gcashName').classList.add('is-invalid');
-            return;
-          }
-          if (!document.getElementById('gcashNumber').value) {
-            document.getElementById('gcashNumber').classList.add('is-invalid');
-            return;
-          }
-        }
-        
-        if (cardRadio.checked) {
-          const cardName = document.getElementById('cardName');
-          const cardNumber = document.getElementById('cardNumber');
-          const cardExpiry = document.getElementById('cardExpiry');
-          const cardCvc = document.getElementById('cardCvc');
-          
-          if (!cardName.value) {
-            cardName.classList.add('is-invalid');
-            return;
-          }
-          if (!cardNumber.value) {
-            cardNumber.classList.add('is-invalid');
-            return;
-          }
-          if (!cardExpiry.value) {
-            cardExpiry.classList.add('is-invalid');
-            return;
-          }
-          if (!cardCvc.value) {
-            cardCvc.classList.add('is-invalid');
-            return;
-          }
-        }
-        
-        // Check room availability again before booking
-        const checkIn = document.getElementById('checkIn').value;
-        const checkOut = document.getElementById('checkOut').value;
-        const availability = isRoomAvailable(currentRoom, checkIn, checkOut);
-        
-        if (!availability.available) {
-          alert('Sorry, the selected room type is no longer available for your dates. Please choose another room or different dates.');
-          return;
-        }
-        
-        // Assign a room
-        const assignedRoom = assignRoom(currentRoom, checkIn, checkOut);
-        if (!assignedRoom) {
-          alert('Error assigning a room. Please try again.');
-          return;
-        }
-        
-        // Update confirmation modal
-        confirmedRoomType.textContent = roomDatabase[currentRoom].name;
-        confirmedRoomNumber.textContent = assignedRoom;
-        confirmedPrice.textContent = finalPrice.textContent;
-        confirmedCheckIn.textContent = checkIn;
-        confirmedCheckOut.textContent = checkOut;
-        
-        // Update UI with assigned room number
-        assignedRoomNumber.textContent = assignedRoom;
-        
-        // If all validations pass
-        successModal.show();
-        
-        // Reset form (but keep room assignment visible)
-        form.reset();
-        form.classList.remove('was-validated');
-        
-        // Reset form to default values (except room assignment)
-        document.getElementById('classicRoom').checked = false;
-        currentRoom = null;
-        updatePrices();
-        checkAvailability();
-        
-        // Reset amenities
-        amenitiesTotal = 0;
-        amenitiesSummary.style.display = 'none';
-        document.getElementById('laundryKilos').disabled = true;
-        document.getElementById('breakfastPersons').disabled = true;
-        document.getElementById('gymPersons').disabled = true;
-      });
-      
-      // Clear validation when user starts typing
-      form.querySelectorAll('.form-control').forEach(input => {
-        input.addEventListener('input', function() {
-          this.classList.remove('is-invalid');
-        });
-      });
-      
-      // Initialize prices and guest limit
-      updatePrices();
-      
-      // Handle room type from URL parameter
-      const urlParams = new URLSearchParams(window.location.search);
-      const roomParam = urlParams.get('room');
-      if (roomParam && ['classic', 'premier', 'deluxe'].includes(roomParam)) {
-        const radio = document.getElementById(`${roomParam}Room`);
-        if (radio) {
-          radio.checked = true;
-          radio.dispatchEvent(new Event('change'));
-          
-          // Highlight the selected room card
-          const selectedCard = document.getElementById(`${roomParam}RoomCard`);
-          selectedCard.classList.add('room-highlight');
-          setTimeout(() => {
-            selectedCard.classList.remove('room-highlight');
-          }, 2000);
-        }
-      }
+<!-- real-time calculations -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // get elements
+    const roomRadios = document.querySelectorAll('input[name="roomType"]');
+    const checkInInput = document.getElementById('checkIn');
+    const checkOutInput = document.getElementById('checkOut');
+    const paxInput = document.getElementById('pax');
+    const amenitiesCheckboxes = document.querySelectorAll('input[name="amenities[]"]');
+    const laundryQuantity = document.getElementById('laundryKilos');
+    const breakfastQuantity = document.getElementById('breakfastPersons');
+    const gymQuantity = document.getElementById('gymPersons');
+    
+    // summary elements
+    const selectedRoomTypeEl = document.getElementById('selectedRoomType');
+    const assignedRoomNumberEl = document.getElementById('assignedRoomNumber');
+    const summaryCheckInEl = document.getElementById('summaryCheckIn');
+    const summaryCheckOutEl = document.getElementById('summaryCheckOut');
+    const summaryNightsEl = document.getElementById('summaryNights');
+    const roomPriceEl = document.getElementById('roomPrice');
+    const totalRoomPriceEl = document.getElementById('totalRoomPrice');
+    const amenitiesListEl = document.getElementById('amenitiesList');
+    const totalAmenitiesPriceEl = document.getElementById('totalAmenitiesPrice');
+    const finalPriceEl = document.getElementById('finalPrice');
+    const amenitiesSummaryEl = document.getElementById('amenitiesSummary');
+    
+    // hidden fields
+    const roomIdField = document.getElementById('roomIdField');
+    const totalPriceField = document.getElementById('totalPriceField');
+    
+    // current selection
+    let selectedRoom = null;
+    let selectedAmenities = [];
+    
+    //  event listeners
+    roomRadios.forEach(radio => {
+        radio.addEventListener('change', updateRoomSelection);
     });
-  </script>
+    
+    checkInInput.addEventListener('change', updateBookingSummary);
+    checkOutInput.addEventListener('change', updateBookingSummary);
+    paxInput.addEventListener('change', updateBookingSummary);
+    
+    amenitiesCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateAmenitiesSelection);
+    });
+    
+    if (laundryQuantity) laundryQuantity.addEventListener('input', updateBookingSummary);
+    if (breakfastQuantity) breakfastQuantity.addEventListener('input', updateBookingSummary);
+    if (gymQuantity) gymQuantity.addEventListener('input', updateBookingSummary);
+    
+    //  room selection
+    function updateRoomSelection() {
+        const selectedRadio = document.querySelector('input[name="roomType"]:checked');
+        if (!selectedRadio) return;
+        
+        selectedRoom = {
+            id: selectedRadio.dataset.roomId,
+            type: selectedRadio.value,
+            number: selectedRadio.dataset.roomNumber,
+            price: parseFloat(selectedRadio.dataset.price),
+            maxGuests: parseInt(selectedRadio.dataset.maxGuests)
+        };
+        
+        // update UI
+        selectedRoomTypeEl.textContent = selectedRadio.value.charAt(0).toUpperCase() + selectedRadio.value.slice(1) + ' Room';
+        assignedRoomNumberEl.textContent = selectedRoom.number;
+        roomPriceEl.textContent = '₱' + selectedRoom.price.toFixed(2);
+        
+        // update hidden field
+        roomIdField.value = selectedRoom.id;
+        
+        // update booking summary
+        updateBookingSummary();
+    }
+    
+    // update amenities selection
+    function updateAmenitiesSelection() {
+        selectedAmenities = [];
+        
+        amenitiesCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                const amenityId = checkbox.value;
+                const amenityRow = checkbox.closest('tr');
+                const amenityName = amenityRow.querySelector('td:nth-child(2) label').textContent.trim();
+                const amenityPrice = parseFloat(amenityRow.querySelector('td:nth-child(4)').textContent);
+                
+                // Check if this amenity has a quantity input
+                let quantity = 1;
+                if (checkbox.id === 'amenity_' + '<?php echo $laundryAmenity ? $laundryAmenity["amenity_id"] : ""; ?>') {
+                    document.getElementById('laundryQuantity').style.display = 'block';
+                    quantity = parseInt(laundryQuantity.value) || 1;
+                } else if (checkbox.id === 'amenity_' + '<?php echo $breakfastAmenity ? $breakfastAmenity["amenity_id"] : ""; ?>') {
+                    document.getElementById('breakfastQuantity').style.display = 'block';
+                    quantity = parseInt(breakfastQuantity.value) || 1;
+                } else if (checkbox.id === 'amenity_' + '<?php echo $gymAmenity ? $gymAmenity["amenity_id"] : ""; ?>') {
+                    document.getElementById('gymQuantity').style.display = 'block';
+                    quantity = parseInt(gymQuantity.value) || 1;
+                }
+                
+                selectedAmenities.push({
+                    id: amenityId,
+                    name: amenityName,
+                    price: amenityPrice,
+                    quantity: quantity,
+                    total: amenityPrice * quantity
+                });
+            } else {
+                // Hide quantity inputs if not selected
+                if (checkbox.id === 'amenity_' + '<?php echo $laundryAmenity ? $laundryAmenity["amenity_id"] : ""; ?>') {
+                    document.getElementById('laundryQuantity').style.display = 'none';
+                } else if (checkbox.id === 'amenity_' + '<?php echo $breakfastAmenity ? $breakfastAmenity["amenity_id"] : ""; ?>') {
+                    document.getElementById('breakfastQuantity').style.display = 'none';
+                } else if (checkbox.id === 'amenity_' + '<?php echo $gymAmenity ? $gymAmenity["amenity_id"] : ""; ?>') {
+                    document.getElementById('gymQuantity').style.display = 'none';
+                }
+            }
+        });
+        
+        updateBookingSummary();
+    }
+    
+    // Update booking summary
+    function updateBookingSummary() {
+        // Update dates display
+        if (checkInInput.value) {
+            summaryCheckInEl.textContent = formatDate(checkInInput.value);
+        }
+        if (checkOutInput.value) {
+            summaryCheckOutEl.textContent = formatDate(checkOutInput.value);
+        }
+        
+        // Calculate nights
+        let nights = 0;
+        if (checkInInput.value && checkOutInput.value) {
+            const checkInDate = new Date(checkInInput.value);
+            const checkOutDate = new Date(checkOutInput.value);
+            nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+            summaryNightsEl.textContent = nights;
+        }
+        
+        // Update room price if room is selected
+        if (selectedRoom) {
+            const totalRoomPrice = selectedRoom.price * nights;
+            totalRoomPriceEl.textContent = '₱' + totalRoomPrice.toFixed(2);
+        }
+        
+        // Update amenities list and total
+        updateAmenitiesList();
+        
+        // Calculate final price
+        const roomPrice = selectedRoom ? selectedRoom.price * nights : 0;
+        const amenitiesTotal = selectedAmenities.reduce((sum, amenity) => sum + amenity.total, 0);
+        const finalPrice = roomPrice + amenitiesTotal;
+        
+        finalPriceEl.textContent = '₱' + finalPrice.toFixed(2);
+        totalPriceField.value = finalPrice.toFixed(2);
+    }
+    
+    // Update amenities list
+    function updateAmenitiesList() {
+        if (selectedAmenities.length === 0) {
+            amenitiesSummaryEl.style.display = 'none';
+            return;
+        }
+        
+        amenitiesSummaryEl.style.display = 'block';
+        amenitiesListEl.innerHTML = '';
+        
+        // Update quantities for amenities that have them
+        selectedAmenities.forEach(amenity => {
+            if (amenity.id === '<?php echo $laundryAmenity ? $laundryAmenity["amenity_id"] : ""; ?>' && laundryQuantity) {
+                amenity.quantity = parseInt(laundryQuantity.value) || 1;
+                amenity.total = amenity.price * amenity.quantity;
+            } else if (amenity.id === '<?php echo $breakfastAmenity ? $breakfastAmenity["amenity_id"] : ""; ?>' && breakfastQuantity) {
+                amenity.quantity = parseInt(breakfastQuantity.value) || 1;
+                amenity.total = amenity.price * amenity.quantity;
+            } else if (amenity.id === '<?php echo $gymAmenity ? $gymAmenity["amenity_id"] : ""; ?>' && gymQuantity) {
+                amenity.quantity = parseInt(gymQuantity.value) || 1;
+                amenity.total = amenity.price * amenity.quantity;
+            }
+        });
+        
+        // Create list items for each amenity
+        selectedAmenities.forEach(amenity => {
+            const amenityItem = document.createElement('div');
+            amenityItem.className = 'd-flex justify-content-between';
+            amenityItem.innerHTML = `
+                <span>${amenity.name} (${amenity.quantity})</span>
+                <span>₱${(amenity.total).toFixed(2)}</span>
+            `;
+            amenitiesListEl.appendChild(amenityItem);
+        });
+        
+        // Update amenities total
+        const amenitiesTotal = selectedAmenities.reduce((sum, amenity) => sum + amenity.total, 0);
+        totalAmenitiesPriceEl.textContent = '₱' + amenitiesTotal.toFixed(2);
+    }
+    
+    // Helper function to format date
+    function formatDate(dateString) {
+        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString('en-US', options);
+    }
+    
+    // Initialize form validation
+    const form = document.getElementById('reservationForm');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    }, false);
+    
+    // Payment method toggle
+    document.querySelectorAll('input[name="paymentMode"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.getElementById('gcashPaymentField').style.display = 
+                this.id === 'gcash' ? 'block' : 'none';
+            document.getElementById('cardPaymentFields').style.display = 
+                this.id === 'card' ? 'block' : 'none';
+        });
+    });
+});
+</script>
+
 </body>
 </html>
